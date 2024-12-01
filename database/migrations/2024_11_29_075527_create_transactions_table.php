@@ -13,11 +13,13 @@ return new class extends Migration
     {
         Schema::create('transactions', function (Blueprint $table) {
             $table->id();
-            $table->foreignIdFor(App\Models\User::class, 'sender_id')->constrained();
-            $table->foreignIdFor(App\Models\User::class, 'recipient_id')->constrained();
-            $table->float('amount',precision:4);
-            $table->enum('status',['successful','failed']);
-            $table->enum('type',['send','request']);
+            $table->foreignIdFor(App\Models\User::class)->constrained('users');
+            $table->foreignId('recipient_id')->nullable()->constrained('users');
+            $table->decimal('amount', 15, 2);
+            $table->enum('status', ['pending', 'completed', 'failed'])->default('pending');
+            $table->enum('transaction_type', ['deposit', 'withdrawal', 'transfer', 'payment']);
+            $table->string('reference')->unique();
+            $table->string('description')->nullable();
             $table->timestamps();
         });
     }
