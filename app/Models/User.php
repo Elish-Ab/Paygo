@@ -22,12 +22,13 @@ class User extends Authenticatable
         'name',
         'email',
         'phone',
+        'username',
+        'password',
         'telegram_id',
         'balance',
         'is_verified',
-        'username',
-        'password',
     ];
+
 
     /**
      * The attributes that should be hidden for serialization.

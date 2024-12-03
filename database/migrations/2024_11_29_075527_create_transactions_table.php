@@ -13,8 +13,8 @@ return new class extends Migration
     {
         Schema::create('transactions', function (Blueprint $table) {
             $table->id();
-            $table->foreignIdFor(App\Models\User::class)->constrained('users');
-            $table->foreignId('recipient_id')->nullable()->constrained('users');
+            $table->unsignedBigInteger('sender_id');
+            $table->unsignedBigInteger('recipient_id');
             $table->decimal('amount', 15, 2);
             $table->enum('status', ['pending', 'completed', 'failed'])->default('pending');
             $table->enum('transaction_type', ['deposit', 'withdrawal', 'transfer', 'payment']);

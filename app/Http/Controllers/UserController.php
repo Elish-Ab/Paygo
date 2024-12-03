@@ -10,7 +10,7 @@ class UserController extends Controller
     public function create_user(Request $request)
     {
         // Validate the request data
-        
+
         $validatedData = $request->validate([
             'name' => 'required|string|max:25',
             'email' => 'required|email|unique:users,email',
