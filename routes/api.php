@@ -5,20 +5,26 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\WalletController;
 use App\Http\Controllers\TransactionController;
+use App\Http\Controllers\AuthController;
 
-// Route::get('/user', function (Request $request) {
-//     return $request->user();
-// })->middleware('auth:sanctum');
 
-Route::get('/home', function(Request $request){
-    return "hi";
-});
-// Route::post('/tokens/create', function (Request $request) {
-//     $token = $request->user()->createToken($request->token_name);
+Route::post('/login', [AuthController::class, 'login']);
+Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth:sanctum');
 
-//     return ['token' => $token->plainTextToken];
-// });
+
+
+
 
 Route::post('/user', [UserController::class, 'create_user']);
-Route::get('user/{id}', [WalletController::class, 'check_balance']);
-Route::post('/transfer', [TransactionController::class, 'transfer']);
+
+
+
+Route::middleware(['auth:sanctum'])->group(function () {
+    Route::get('/user', function (Request $request) {
+        return "hi";
+    });
+
+
+    Route::get('user/{id}', [WalletController::class, 'check_balance']);
+    Route::post('/transfer', [TransactionController::class, 'transfer']);
+});
