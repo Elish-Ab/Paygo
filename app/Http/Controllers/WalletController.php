@@ -4,13 +4,14 @@ namespace App\Http\Controllers;
 
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 class WalletController extends Controller
 {
     public function check_balance(Request $request){
-        $user = User::findOrFail($request->id);
-        $balance = $user->balance;
-        return $balance;
+
+        $balance = Auth::user()->balance; // Only accessible if middleware passes
+        return response()->json(['balance' => $balance], 200);
     }
 
     public function withdraw(Request $request){
