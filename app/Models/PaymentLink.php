@@ -6,5 +6,6 @@ use Illuminate\Database\Eloquent\Model;
 
 class PaymentLink extends Model
 {
-    //
+    protected  $fillable= ['amount'];
+    
 }

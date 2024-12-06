@@ -15,20 +15,62 @@ class WalletController extends Controller
     }
 
     public function withdraw(Request $request){
-        $validateData = $request->validate([
-            'id'=> 'required|integer',
-            'amount'=>"required|integer",
-
+        $validatedData = $request->validate([
+            'amount' => 'required|numeric|min:1',
         ]);
 
-        $user = User::findOrFail($validateData->id);
-        $withdraw = $validateData->amount;
-        $balance = $user->balance;
-        if($balance>=50 & $balance > $withdraw){
-                $withdraw = $balance - $withdraw;
-                return response()->json(['message' => 'Withdraw successfully'], 201);
-        }else{
-            return response()->json(["message"=>"withdraw successfully"], 200);
+        $user = Auth::user();
+        $amount = $validatedData['amount'];
+
+        if ($user->balance < $amount) {
+            return response()->json(['message' => 'Insufficient balance'], 400);
         }
-    }
+
+        DB::transaction(function () use ($user, $amount) {
+            $user->balance -= $amount;
+            $user->save();
+
+            // Log the transaction
+            DB::table('transactions')->insert([
+                'user_id' => $user->id,
+                'type' => 'withdraw',
+                'amount' => $amount,
+                'status' => 'completed',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+        });
+
+        return response()->json(['message' => 'Withdrawal successful'], 200);
+}
+
+
+
+    public function loadFunds(Request $request){
+
+        $validatedData = $request->validate([
+        'amount' => 'required|numeric|min:1',
+    ]);
+
+    // Prepare Chapa API request
+        $chapaPayload = [
+            'amount' => $validatedData['amount'],
+            'email' => Auth::user()->email,
+            'currency' => 'ETB',
+            'callback_url' => route('chapa.callback'),
+        ];
+
+        // Make API request (example with Laravel HTTP Client)
+        $response = Http::withHeaders([
+            'Authorization' => 'Bearer ' . env('CHAPA_SECRET_KEY'),
+        ])->post('https://api.chapa.co/v1/transaction/initialize', $chapaPayload);
+
+        if ($response->successful()) {
+            // Redirect user to Chapa payment page
+            return response()->json(['payment_url' => $response->json('data.checkout_url')]);
+        }
+
+        return response()->json(['message' => 'Failed to initialize payment'], 500);
+}
+
 }

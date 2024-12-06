@@ -26,4 +26,41 @@ class TransactionController extends Controller
 
         return response()->json(['message' => 'Transaction is being processed'], 202);
     }
+
+    public function chapaCallback(Request $request){
+
+        $validatedData = $request->validate([
+            'transaction_id' => 'required|string',
+        ]);
+
+        $response = Http::withHeaders([
+            'Authorization' => 'Bearer ' . env('CHAPA_SECRET_KEY'),
+        ])->get('https://api.chapa.co/v1/transaction/verify/' . $validatedData['transaction_id']);
+
+        if ($response->successful() && $response->json('status') === 'success') {
+            // Update user's wallet
+            DB::transaction(function () use ($response) {
+                $user = Auth::user();
+                $amount = $response->json('data.amount');
+
+                $user->balance += $amount;
+                $user->save();
+
+                // Log the transaction
+                DB::table('transactions')->insert([
+                    'user_id' => $user->id,
+                    'type' => 'load',
+                    'amount' => $amount,
+                    'status' => 'completed',
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+            });
+
+            return response()->json(['message' => 'Wallet updated successfully']);
+        }
+
+        return response()->json(['message' => 'Transaction verification failed'], 400);
+}
+
 }
