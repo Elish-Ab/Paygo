@@ -28,4 +28,9 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     Route::get('user/{id}', [WalletController::class, 'check_balance'])->middleware(EnsureUserIsOwner::class);
     Route::post('/transfer', [TransactionController::class, 'transfer'])->middleware(EnsureUserIsOwner::class);
+
+    Route::post('pay', 'App\Http\Controllers\ChapaController@initialize')->name('pay');
+
+    // The callback url after a payment
+    Route::get('callback/{reference}', 'App\Http\Controllers\ChapaController@callback')->name('callback');
 });

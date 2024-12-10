@@ -4,13 +4,24 @@
     "type": "project",
     "description": "The skeleton application for the Laravel framework.",
     "keywords": ["laravel", "framework"],
+    "repositories": [
+        {
+            "type": "vcs",
+            "url": "https://github.com/Elish-Ab/chapa-laravel",
+            "canonical": false
+        }
+    ],
     "license": "MIT",
+    "minimum-stability": "dev",
+    "prefer-stable": true,
     "require": {
         "php": "^8.2",
         "laravel/framework": "^11.31",
         "laravel/sanctum": "^4.0",
         "laravel/tinker": "^2.9",
-        "vladimir-yuldashev/laravel-queue-rabbitmq": "^14.1"
+        "vladimir-yuldashev/laravel-queue-rabbitmq": "^14.1",
+         "illuminate/support": "^11.0",
+        "elish-ab/chapa-laravel": "dev-main"
     },
     "require-dev": {
         "fakerphp/faker": "^1.23",
@@ -67,7 +78,5 @@
             "pestphp/pest-plugin": true,
             "php-http/discovery": true
         }
-    },
-    "minimum-stability": "stable",
-    "prefer-stable": true
+    }
 }
