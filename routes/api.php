@@ -6,10 +6,11 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\WalletController;
 use App\Http\Middleware\EnsureUserIsOwner;
+use App\Http\Controllers\PaymentLinkController;
 use App\Http\Controllers\TransactionController;
 
 
-Route::post('/login', [AuthController::class, 'login']);
+Route::post('/login', [AuthController::class, 'login'])->name('login');
 Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth:sanctum');
 
 
@@ -29,8 +30,9 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('user/{id}', [WalletController::class, 'check_balance'])->middleware(EnsureUserIsOwner::class);
     Route::post('/transfer', [TransactionController::class, 'transfer'])->middleware(EnsureUserIsOwner::class);
 
-    Route::post('pay', 'App\Http\Controllers\ChapaController@initialize')->name('pay');
+    Route::post('/pay', 'App\Http\Controllers\ChapaController@initialize')->name('pay');
 
+    Route::post('/generate_fund',[PaymentLinkController::class,'generate_link'])->name('generate');
     // The callback url after a payment
     Route::get('callback/{reference}', 'App\Http\Controllers\ChapaController@callback')->name('callback');
 });

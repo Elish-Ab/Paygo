@@ -11,7 +11,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('paymentlinks', function (Blueprint $table) {
+        Schema::create('payment_links', function (Blueprint $table) {
             $table->uuid();
             $table->foreignId('user_id')->constrained('users');
             $table->decimal('amount', 15, 2);
