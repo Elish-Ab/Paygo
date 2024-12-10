@@ -19,6 +19,10 @@ Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth:sanc
 
 Route::post('/user', [UserController::class, 'create_user']);
 
+Route::post('/generate_fund', [PaymentLinkController::class, 'generate_link'])->name('generate');
+Route::get('/login', function () {
+    return response()->json(['message' => 'Use POST to access this route.'], 405);
+});
 
 
 Route::middleware(['auth:sanctum'])->group(function () {
@@ -32,7 +36,10 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     Route::post('/pay', 'App\Http\Controllers\ChapaController@initialize')->name('pay');
 
-    Route::post('/generate_fund',[PaymentLinkController::class,'generate_link'])->name('generate');
+
+
     // The callback url after a payment
     Route::get('callback/{reference}', 'App\Http\Controllers\ChapaController@callback')->name('callback');
 });
+
+
