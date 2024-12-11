@@ -26,15 +26,15 @@ class ChapaController extends Controller
         $data = [
 
             'amount' => 100,
-            'email' => request()->email,
+            'email' => 'hi@negade.com',
             'tx_ref' => $reference,
             'currency' => "ETB",
             'callback_url' => route('callback',[$reference]),
             'first_name' => "Israel",
-            'last_name' => "goytom",
+            'last_name' => "Goytom",
             "customization" => [
-                "title" => 'Dummy Laravel',
-                "description" => "I amma test this"
+                "title" => 'Chapa Laravel Test',
+                "description" => "I amma testing this"
             ]
         ];
 
@@ -44,11 +44,10 @@ class ChapaController extends Controller
 
         if ($payment['status'] !== 'success') {
             // notify something went wrong
-            return response()->json(["message"=>"payment failed"], 500);
+            return;
         }
 
-        return response()->json($data, 200);
-        // return redirect($payment['data']['checkout_url']);
+        return redirect($payment['data']['checkout_url']);
     }
 
     /**
@@ -64,13 +63,12 @@ class ChapaController extends Controller
         //if payment is successful
         if ($data['status'] ==  'success') {
 
-            return response()->json(["message"=>"sucess"], 200, $headers);
-        // dd($data);
+
+        dd($data);
         }
 
         else{
             //oopsie something ain't right.
-            return response()->json(["message"=>"failed"], 500, $headers);
         }
 
 
