@@ -19,8 +19,8 @@ Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth:sanc
 
 Route::post('/user', [UserController::class, 'create_user']);
 
-// Route::post('/generate_fund', [PaymentLinkController::class, 'generate_link'])->name('generate');
-Route::post('/generate_fund', [PaymentLinkController::class, 'generate_link'])->name('generate');
+Route::post('/initialize-payment', [PaymentLinkController::class, 'initializePayment'])->name('initalize');
+Route::post('/generate-link', [PaymentLinkController::class, 'generateLink'])->name('generate');
 
 
 Route::get('/login', function () {
@@ -48,4 +48,6 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
 Route::post('/payment/initialize', [PaymentLinkController::class, 'initializePayment'])->name('payment.initialize');
 Route::get('/payment/callback', [PaymentLinkController::class, 'callback'])->name('payment.callback');
-Route::get('/payment/return', [PaymentLnkController::class, 'return'])->name('payment.return');
+Route::get('/payment/return', [PaymentLinkController::class, 'return'])->name('payment.return');
+Route::post('/payment/link', [PaymentLinkController::class, 'generateLink']);
+Route::post('/payment/verify', [PaymentLinkController::class, 'verifyPayment'])->name('payment.verify');
