@@ -46,7 +46,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
 });
 
 
-Route::post('/payment/initialize', [PaymentLinkController::class, 'initializePayment'])->name('payment.initialize');
+// Route::post('/payment/initialize', [PaymentLinkController::class, 'initializePayment'])->name('payment.initialize');
 Route::get('/payment/callback', [PaymentLinkController::class, 'callback'])->name('payment.callback');
 Route::get('/payment/return', [PaymentLinkController::class, 'return'])->name('payment.return');
 Route::post('/payment/link', [PaymentLinkController::class, 'generateLink']);
