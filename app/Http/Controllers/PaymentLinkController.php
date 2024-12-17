@@ -63,9 +63,13 @@ class PaymentLinkController extends Controller
                     'message' => 'Checkout URL is missing in the response from Chapa.'
                 ]);
             }
+            
+            $imagePath = storage_path('app/qr.png');
 
-            // Generate the QR code as a base64 string
-            $qrCodeImage = QrCode::format('png')->size(200)->generate('https://example.com', 'path/to/save/qr.png');
+
+            // Generate the QR code with the correct checkout URL
+            $qrCodeImage = QrCode::format('png')->size(200)->generate($checkoutUrl, $imagePath);
+
 
             return response()->json([
                 'status' => 'success',
