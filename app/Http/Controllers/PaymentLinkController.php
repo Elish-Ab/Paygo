@@ -185,34 +185,43 @@ public function initializePayment(Request $request)
 
 
 
-        public function handleWebhook(Request $request)
-        {
-            // Verify the webhook signature using the secret key
-            $webhookSignature = $request->header('X-Chapa-Signature');
-            $computedSignature = hash_hmac('sha256', $request->getContent(), env('CHAPA_WEBHOOK_SECRET'));
+public function handleWebhook(Request $request)
+{
+    // Get the raw payload (trimmed)
+    $payload = trim($request->getContent());
 
-            if ($webhookSignature !== $computedSignature) {
-                Log::error('Invalid webhook signature');
-                return response('Invalid signature', 400);
-            }
+    // Log received payload for debugging
+    Log::info('Received Payload: ' . $payload);
 
-            // Process the webhook payload
-            $data = $request->json()->all();
+    // Retrieve the signature from the webhook header
+    $webhookSignature = $request->header('X-Chapa-Signature');
+    Log::info('Webhook Signature from Header: ' . $webhookSignature);
 
-            // Example: Check the payment status and process accordingly
-            if ($data['status'] == 'success') {
-                // Update the transaction status in the database
-                Transaction::where('tx_ref', $data['tx_ref'])->update(['status' => 'paid']);
+    // Retrieve the secret key from the .env file
+    $secret = env('CHAPA_WEBHOOK_SECRET');
 
-                // Optionally notify the user, or perform other actions
-                // Send email, SMS, etc.
-            } else {
-                // Handle failed or pending payments
-                Transaction::where('tx_ref', $data['tx_ref'])->update(['status' => 'failed']);
-            }
+    // Compute the HMAC signature using sha256
+    $computedSignature = hash_hmac('sha256', $payload, $secret);
+    Log::info('Computed Signature: ' . $computedSignature);
 
-            return response('Webhook received successfully');
-        }
+    // Compare the computed signature with the webhook signature
+    if ($webhookSignature !== $computedSignature) {
+        Log::error('Invalid webhook signature');
+        return response('Invalid signature', 400);
+    }
+
+    // Process the webhook payload
+    $data = $request->json()->all();
+    if ($data['status'] == 'success') {
+        // Handle successful payment
+        Transaction::where('tx_ref', $data['tx_ref'])->update(['status' => 'paid']);
+    } else {
+        // Handle failed or pending payments
+        Transaction::where('tx_ref', $data['tx_ref'])->update(['status' => 'failed']);
+    }
+
+    return response('Webhook received successfully');
+}
 
 
 
