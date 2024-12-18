@@ -13,15 +13,19 @@ return new class extends Migration
     {
         Schema::create('transactions', function (Blueprint $table) {
             $table->id();
-            $table->unsignedBigInteger('sender_id');
-            $table->unsignedBigInteger('recipient_id');
-            $table->decimal('amount', 15, 2);
-            $table->enum('status', ['pending', 'completed', 'failed'])->default('pending');
-            $table->enum('transaction_type', ['deposit', 'withdrawal', 'transfer', 'payment']);
-            $table->string('reference')->unique();
-            $table->string('description')->nullable();
+            $table->string('tx_ref')->unique();            // Unique transaction reference
+            $table->decimal('amount', 15, 2);             // Payment amount
+            $table->string('currency');                   // Payment currency
+            $table->string('email');                      // Payer's email
+            $table->string('phone');                      // Payer's phone
+            $table->string('callback_url');               // Callback URL for payment notifications
+            $table->enum('status', ['pending', 'completed', 'failed'])->default('pending'); // Payment status
+            $table->enum('transaction_type', ['payment', 'transfer'])->default('payment'); // Transaction type
+            $table->text('description')->nullable();      // Additional notes
             $table->timestamps();
         });
+
+
     }
 
     /**

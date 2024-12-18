@@ -63,12 +63,20 @@ class PaymentLinkController extends Controller
                     'message' => 'Checkout URL is missing in the response from Chapa.'
                 ]);
             }
-            
-            $imagePath = storage_path('app/qr.png');
 
+            // Generate a directory based on the current date
+            $date = now()->format('Y-m-d');
+            $directory = storage_path("app/{$date}");
+            if (!file_exists($directory)) {
+                mkdir($directory, 0755, true); // Create the directory if it doesn't exist
+            }
 
-            // Generate the QR code with the correct checkout URL
-            $qrCodeImage = QrCode::format('png')->size(200)->generate($checkoutUrl, $imagePath);
+            // Generate a unique filename within the directory
+            $timestamp = time();
+            $filename = "{$directory}/qr_{$timestamp}.png";
+
+            // Generate the QR code
+            $qrCodeImage = QrCode::format('png')->size(200)->generate($checkoutUrl, $filename);
 
 
             return response()->json([
@@ -123,6 +131,19 @@ public function initializePayment(Request $request)
         'callback_url' => $validated['callback_url'],
         'tx_ref' => 'chewatatest-' . time()  // Add tx_ref for transaction reference
     ];
+
+
+       // Save transaction details to the database
+       Transaction::create([
+        'tx_ref' => $postData['tx_ref'],
+        'amount' => $postData['amount'],
+        'currency' => $postData['currency'],
+        'email' => $postData['email'],
+        'phone' => $postData['phone'],
+        'callback_url' => $postData['callback_url'],
+        'status' => 'pending',
+        'transaction_type' => 'payment'
+    ]);
 
     try {
         // Make the API request with the correct Authorization header

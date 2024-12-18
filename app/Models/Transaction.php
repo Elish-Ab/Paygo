@@ -9,14 +9,38 @@ class Transaction extends Model
 {
     use HasFactory;
 
+    /**
+     * The table associated with the model.
+     *
+     * @var string
+     */
+    protected $table = 'transactions';
+
+    /**
+     * The attributes that are mass assignable.
+     *
+     * @var array
+     */
     protected $fillable = [
-        'sender_id',
-        'recipient_id',
+        'tx_ref',
         'amount',
+        'currency',
+        'email',
+        'phone',
+        'callback_url',
         'status',
         'transaction_type',
-        'reference',
-        'description',
+    ];
+
+    /**
+     * The attributes that should be cast to native types.
+     *
+     * @var array
+     */
+    protected $casts = [
+        'amount' => 'float',
+        'status' => 'string',
+        'transaction_type' => 'string',
     ];
 
 }

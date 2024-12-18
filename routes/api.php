@@ -21,7 +21,7 @@ Route::post('/user', [UserController::class, 'create_user']);
 
 Route::post('/initialize-payment', [PaymentLinkController::class, 'initializePayment'])->name('initalize');
 Route::post('/generate-link', [PaymentLinkController::class, 'generateLink'])->name('generate');
-
+Route::post('/webhook', [PaymentLinkController::class, 'handleWebhook'])->name('handleWebhook');
 
 Route::get('/login', function () {
     return response()->json(['message' => 'Use POST to access this route.'], 405);
