@@ -111,7 +111,7 @@ class PaymentLinkController extends Controller
 
 
 
-public function initializePayment(Request $request)
+public function initalizePayment(Request $request)
 {
     // Validate the incoming request data
     $validated = $request->validate([
