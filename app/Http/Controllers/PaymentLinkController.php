@@ -211,8 +211,11 @@ public function handleWebhook(Request $request)
     }
 
     Log::info('Webhook verified successfully');
+    Log::info("message", $request->all());
+
     return response('Webhook verified', 200);
 }
 
 
 }
+            

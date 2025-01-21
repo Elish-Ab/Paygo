@@ -22,20 +22,19 @@ Route::post('/initalize-payment', [PaymentLinkController::class, 'initalizePayme
 Route::post('/generate-link', [PaymentLinkController::class, 'generateLink'])->name('generate');
 Route::post('/webhook', [PaymentLinkController::class, 'handleWebhook'])->name('handleWebhook');
 Route::middleware(['auth:sanctum'])->group(function () {
-    Route::get('/user', function (Request $request) { $user = $request->user(); return response()->json(['message' => 'User authenticated successfully', 'user' => $user], 200);}); });
+    Route::get('/user', function (Request $request) { $user = $request->user(); return response()->json(['message' => 'User authenticated successfully', 'user' => $user], 200);});
     Route::get('user/{id}', [WalletController::class, 'check_balance'])->middleware(EnsureUserIsOwner::class);
     Route::post('/transfer', [TransactionController::class, 'transfer'])->middleware(EnsureUserIsOwner::class);
 
     // Route::post('/pay', 'App\Http\Controllers\ChapaController@initialize')->name('pay');
 
-
-
     // The callback url after a payment
     Route::get('callback/{reference}', 'App\Http\Controllers\ChapaController@callback')->name('callback');
-
+});
     // The redirect url after a payment
 // Route::post('/payment/initialize', [PaymentLinkController::class, 'initializePayment'])->name('payment.initialize');
 Route::get('/payment/callback', [PaymentLinkController::class, 'callback'])->name('payment.callback');
 Route::get('/payment/return', [PaymentLinkController::class, 'return'])->name('payment.return');
 Route::post('/payment/link', [PaymentLinkController::class, 'generateLink']);
 Route::post('/payment/verify', [PaymentLinkController::class, 'verifyPayment'])->name('payment.verify');
+// 3|VmUN4SH1NRRNOT5la4KBV0Jn0AW7ZBUVZD858jbs310250a8
