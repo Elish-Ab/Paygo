@@ -187,42 +187,32 @@ public function initializePayment(Request $request)
 
 public function handleWebhook(Request $request)
 {
-    // Get the raw payload (trimmed)
-    $payload = trim($request->getContent());
+    // Raw payload
+    $rawPayload = $request->getContent();
 
-    // Log received payload for debugging
-    Log::info('Received Payload: ' . $payload);
+    // Canonicalize payload to ensure consistent formatting
+    $canonicalPayload = json_encode(json_decode($rawPayload, true));
 
-    // Retrieve the signature from the webhook header
-    $webhookSignature = $request->header('X-Chapa-Signature');
-    Log::info('Webhook Signature from Header: ' . $webhookSignature);
+    // Compute the HMAC signature
+    $computedSignature = hash_hmac('sha256', $canonicalPayload, env('CHAPA_WEBHOOK_SECRET'));
 
-    // Retrieve the secret key from the .env file
-    $secret = env('CHAPA_WEBHOOK_SECRET');
-
-    // Compute the HMAC signature using sha256
-    $computedSignature = hash_hmac('sha256', $payload, $secret);
+    // Log details for debugging
+    Log::info('Request Headers: ' . json_encode($request->headers->all()));
+    Log::info('Raw Payload: ' . $rawPayload);
+    Log::info('Canonical Payload: ' . $canonicalPayload);
+    Log::info('Webhook Signature from Header: ' . $request->header('X-Chapa-Signature'));
     Log::info('Computed Signature: ' . $computedSignature);
+    Log::info('Webhook Secret Key: ' . env('CHAPA_WEBHOOK_SECRET'));
 
-    // Compare the computed signature with the webhook signature
-    if ($webhookSignature !== $computedSignature) {
+    // Validate signature
+    if (!hash_equals($request->header('X-Chapa-Signature'), $computedSignature)) {
         Log::error('Invalid webhook signature');
         return response('Invalid signature', 400);
     }
 
-    // Process the webhook payload
-    $data = $request->json()->all();
-    if ($data['status'] == 'success') {
-        // Handle successful payment
-        Transaction::where('tx_ref', $data['tx_ref'])->update(['status' => 'paid']);
-    } else {
-        // Handle failed or pending payments
-        Transaction::where('tx_ref', $data['tx_ref'])->update(['status' => 'failed']);
-    }
-
-    return response('Webhook received successfully');
+    Log::info('Webhook verified successfully');
+    return response('Webhook verified', 200);
 }
-
 
 
 }
