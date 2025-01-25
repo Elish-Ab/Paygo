@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use Illuminate\Support\Facades\Log;
 use Chapa\Chapa\Facades\Chapa as Chapa;
 
 class ChapaController extends Controller
@@ -54,23 +55,27 @@ class ChapaController extends Controller
      * Obtain Rave callback information
      * @return void
      */
-    public function callback($reference)
+    public function callback(Request $request, $reference)
     {
+        Log::info("Callback received with reference: {$reference}");
 
-        $data = Chapa::verifyTransaction($reference);
-        dd($data);
+        try {
+            $data = Chapa::verifyTransaction($reference);
+            Log::info('Chapa verification response', ['response' => $data]);
 
-        //if payment is successful
-        if ($data['status'] ==  'success') {
+            if ($data['status'] === 'success') {
+                // Handle successful payment
+                Log::info('Payment successful', ['data' => $data]);
+                return response()->json(['message' => 'Payment successful', 'data' => $data]);
+            }
 
-
-        dd($data);
+            // Handle failed payment
+            Log::error('Payment verification failed', ['response' => $data]);
+            return response()->json(['message' => $data['message'], 'status' => $data['status']], 400);
+        } catch (\Exception $e) {
+            Log::error('Callback error', ['error' => $e->getMessage()]);
+            return response()->json(['message' => 'An error occurred during verification'], 500);
         }
-
-        else{
-            //oopsie something ain't right.
-        }
-
-
     }
+
 }

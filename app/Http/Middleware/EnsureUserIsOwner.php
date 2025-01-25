@@ -4,6 +4,7 @@ namespace App\Http\Middleware;
 
 use Closure;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -17,12 +18,17 @@ class EnsureUserIsOwner
     public function handle(Request $request, Closure $next): Response
     {
         $user = Auth::user();
-
-        // Check if the authenticated user's ID matches the requested resource
-
-        if($user->id !== (int) $request->route('id')){
-            return response()->json(['mesaage '=>'Forbidden'], 403);
+        Log::alert("message", ['user' => $user]);
+        if (!$user) {
+            return response()->json(['message' => 'User not authenticated'], 401);
         }
+
+        $routeId = $request->route('id');
+        if ($user->id !== (int) $routeId) {
+            return response()->json(['message' => 'Forbidden'], 403);
+        }
+
         return $next($request);
     }
+
 }

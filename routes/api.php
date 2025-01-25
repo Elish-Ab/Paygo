@@ -17,6 +17,8 @@ Route::post('/login', [AuthController::class, 'login'])->name('login');
 Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth:sanctum');
 Route::post('/signup', [UserController::class, 'create_user']);
 
+
+
 // Payment routes
 Route::post('/initalize-payment', [PaymentLinkController::class, 'initalizePayment'])->name('initalize');
 Route::post('/generate-link', [PaymentLinkController::class, 'generateLink'])->name('generate');
@@ -24,7 +26,7 @@ Route::post('/webhook', [PaymentLinkController::class, 'handleWebhook'])->name('
 Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/user', function (Request $request) { $user = $request->user(); return response()->json(['message' => 'User authenticated successfully', 'user' => $user], 200);});
     Route::get('user/{id}', [WalletController::class, 'check_balance'])->middleware(EnsureUserIsOwner::class);
-    Route::post('/transfer', [TransactionController::class, 'transfer'])->middleware(EnsureUserIsOwner::class);
+    Route::post('/transfer/{id}', [TransactionController::class, 'transfer'])->middleware(EnsureUserIsOwner::class);
 
     // Route::post('/pay', 'App\Http\Controllers\ChapaController@initialize')->name('pay');
 

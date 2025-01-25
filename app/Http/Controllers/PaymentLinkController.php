@@ -162,6 +162,7 @@ public function initalizePayment(Request $request)
                 'status' => 'success',
                 'checkout_url' => $checkoutUrl
             ]);
+
         } else {
             Log::error('Chapa API Error:', [
                 'status_code' => $response->status(),
@@ -218,4 +219,3 @@ public function handleWebhook(Request $request)
 
 
 }
-            
