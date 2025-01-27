@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\PaymentRequest;
 use SimpleQRCode;
 use App\Models\PaymentLink;
 use App\Models\Transaction;
@@ -12,24 +13,17 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Validator;
 use SimpleSoftwareIO\QrCode\Facades\QrCode;
 use BaconQrCode\Renderer\Image\ImagickImageBackEnd;
-
+use Mockery\Generator\StringManipulation\Pass\Pass;
 
 class PaymentLinkController extends Controller
 {
     /**
      * Generate a payment link and initialize the payment process.
      */
-    public function generateLink(Request $request)
+    public function generateLink(PaymentRequest $request)
 {
     // Validate the incoming request
-    $validated = $request->validate([
-        'amount' => 'required|numeric',
-        'currency' => 'required|string',
-        'email' => 'required|email',
-        'phone' => 'required|string',
-        'callback_url' => 'required|url'
-    ]);
-
+    $validated = $request->validated();
     // Prepare the data to send to the API
     $postData = [
         'amount' => $validated['amount'],
@@ -111,16 +105,10 @@ class PaymentLinkController extends Controller
 
 
 
-public function initalizePayment(Request $request)
+public function initalizePayment(PaymentRequest $request)
 {
     // Validate the incoming request data
-    $validated = $request->validate([
-        'amount' => 'required|numeric',
-        'currency' => 'required|string',
-        'email' => 'required|email',
-        'phone' => 'required|string',
-        'callback_url' => 'required|url'
-    ]);
+    $validated = $request->validated();
 
     // Prepare data for the payment initialization
     $postData = [
@@ -162,7 +150,6 @@ public function initalizePayment(Request $request)
                 'status' => 'success',
                 'checkout_url' => $checkoutUrl
             ]);
-
         } else {
             Log::error('Chapa API Error:', [
                 'status_code' => $response->status(),

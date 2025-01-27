@@ -7,8 +7,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\WalletController;
 use App\Http\Middleware\EnsureUserIsOwner;
-use Illuminate\Support\Facades\Validator;
-use App\Http\Controllers\PaymentLinkController;
+use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\TransactionController;
 
 
@@ -17,26 +16,30 @@ Route::post('/login', [AuthController::class, 'login'])->name('login');
 Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth:sanctum');
 Route::post('/signup', [UserController::class, 'create_user']);
 
+// PaymentController routes
+// Route::post('/initalize-PaymentController', [PaymentController::class, 'initalizePaymentController'])->name('initalize');
+Route::post('/generate-link', [PaymentController::class, 'generateLink'])->name('generate');
+Route::post('/webhook', [PaymentController::class, 'handleWebhook'])->name('handleWebhook');
+Route::middleware('auth:sanctum')->post('/initalize-payment', [PaymentController::class, 'initalize-payment']);
 
-
-// Payment routes
-Route::post('/initalize-payment', [PaymentLinkController::class, 'initalizePayment'])->name('initalize');
-Route::post('/generate-link', [PaymentLinkController::class, 'generateLink'])->name('generate');
-Route::post('/webhook', [PaymentLinkController::class, 'handleWebhook'])->name('handleWebhook');
+// Authenticated routes
 Route::middleware(['auth:sanctum'])->group(function () {
-    Route::get('/user', function (Request $request) { $user = $request->user(); return response()->json(['message' => 'User authenticated successfully', 'user' => $user], 200);});
+    Route::get('/user', function (Request $request) {
+        $user = $request->user();
+        return response()->json(['message' => 'User authenticated successfully', 'user' => $user], 200);
+    });
+
     Route::get('user/{id}', [WalletController::class, 'check_balance'])->middleware(EnsureUserIsOwner::class);
-    Route::post('/transfer/{id}', [TransactionController::class, 'transfer'])->middleware(EnsureUserIsOwner::class);
 
-    // Route::post('/pay', 'App\Http\Controllers\ChapaController@initialize')->name('pay');
+    // Corrected route for transfer
+    Route::post('/transaction/transfer', [TransactionController::class, 'transfer']); // No need for EnsureUserIsOwner middleware here
 
-    // The callback url after a payment
-    Route::get('callback/{reference}', 'App\Http\Controllers\ChapaController@callback')->name('callback');
+    // Chapa callback route
+    Route::post('/callback', [TransactionController::class, 'chapaCallback']);
 });
-    // The redirect url after a payment
-// Route::post('/payment/initialize', [PaymentLinkController::class, 'initializePayment'])->name('payment.initialize');
-Route::get('/payment/callback', [PaymentLinkController::class, 'callback'])->name('payment.callback');
-Route::get('/payment/return', [PaymentLinkController::class, 'return'])->name('payment.return');
-Route::post('/payment/link', [PaymentLinkController::class, 'generateLink']);
-Route::post('/payment/verify', [PaymentLinkController::class, 'verifyPayment'])->name('payment.verify');
-// 3|VmUN4SH1NRRNOT5la4KBV0Jn0AW7ZBUVZD858jbs310250a8
+
+// Other PaymentController routes
+Route::get('/payment/callback', [PaymentController::class, 'callback'])->name('payment.callback');
+Route::get('/payment/return', [PaymentController::class, 'return'])->name('payment.return');
+Route::post('/payment/link', [PaymentController::class, 'generateLink']);
+Route::post('/payment/verify', [PaymentController::class, 'verify-payment'])->name('payment.verify');

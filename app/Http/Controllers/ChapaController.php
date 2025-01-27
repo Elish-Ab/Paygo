@@ -55,7 +55,7 @@ class ChapaController extends Controller
      * Obtain Rave callback information
      * @return void
      */
-    public function callback(Request $request, $reference)
+    public function callback($reference)
     {
         Log::info("Callback received with reference: {$reference}");
 

@@ -2,18 +2,62 @@
 
 namespace App\Http\Controllers;
 
-use console;
-use Illuminate\Http\Request;
-use Chapa\Chapa\Facades\Chapa;
 use App\Jobs\ProcessTransaction;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Log;
 
 class TransactionController extends Controller
 {
+
+    public function transferBanktoBank(Request $request){
+
+        $validateData = $request->validate([
+            ''
+        ]);
+    }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     public function transfer(Request $request)
     {
         // Validate the incoming request
@@ -23,44 +67,23 @@ class TransactionController extends Controller
             'recipient_id' => 'required|integer|exists:users,id',
             'status' => 'required|string|in:pending,completed,canceled',
             'transaction_type' => 'required|string|in:deposit,withdrawal,transfer',
-            'reference' => 'nullable|string|unique:transactions,reference',
+            'reference' => 'required|string|unique:transactions,reference',
             'description' => 'nullable|string',
         ])->validate();
 
         try {
-            // Generate a unique reference
-            $validatedData['reference'] = Chapa::generateReference();
-
             // Dispatch the transaction job to RabbitMQ
             ProcessTransaction::dispatch($validatedData);
-            Log::alert("Transaction sent to RabbitMQ", ['data' => $validatedData]);
 
-            // Initialize payment with Chapa
-            $payment = Chapa::initializePayment([
-                'amount' => $validatedData['amount'],
-                'email' => 'hi@negade.com',
-                'tx_ref' => $validatedData['reference'],
-                'currency' => 'ETB',
-                'callback_url' => route('callback', ['reference' => $validatedData['reference']]),
-                'first_name' => 'Test',
-                'last_name' => 'User',
-                "customization" => [
-                    "title" => 'Chapa Payment',
-                    "description" => "Payment for services",
-                ],
-            ]);
+            // Log the transaction request
+            Log::info('Transaction dispatched to RabbitMQ', ['data' => $validatedData]);
 
-            if ($payment['status'] !== 'success') {
-                return response()->json(['message' => 'Failed to initialize payment'], 500);
-            }
-
-            return redirect($payment['data']['checkout_url']);
+            return response()->json(['message' => 'Transaction is being processed'], 202);
         } catch (\Exception $e) {
             Log::error('Failed to dispatch transaction', ['error' => $e->getMessage()]);
             return response()->json(['message' => 'Failed to process transaction'], 500);
         }
     }
-
 
 
     public function chapaCallback(Request $request)

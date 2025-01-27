@@ -1,71 +1,89 @@
 <?php
-
 namespace Tests\Feature;
 
-use Tests\TestCase;
+use App\Models\User;
+use App\Models\Transaction;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Mockery;
-use Chapa\Chapa\Facades\Chapa;
-use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Queue;
+use Tests\TestCase;
 
 class TransactionControllerTest extends TestCase
 {
-    // Test the transfer method
+    use RefreshDatabase;
+
     public function testTransfer()
     {
-        // Mock Chapa::initializePayment response
-        $mockedPaymentResponse = [
-            'status' => 'success',
-            'data' => [
-                'checkout_url' => 'https://checkout.chapa.co'
-            ]
-        ];
-
-        // Mock the response from Chapa
-        Chapa::shouldReceive('initializePayment')
-            ->once()
-            ->andReturn($mockedPaymentResponse);
-
-        // Make a request to the transfer method with mock data
-        $response = $this->postJson('/api/transfer', [
-            'id' => 1,
-            'amount' => 100,
-            'recipient_id' => 2,
+        // Arrange: Create a user and transaction data
+        $user = User::factory()->create();
+        $data = [
+            'amount' => 1000,
             'status' => 'pending',
             'transaction_type' => 'transfer',
-            'reference' => 'unique-ref-123',
-            'description' => 'Payment for services',
-        ]);
-
-        // Assert the response redirects to the Chapa checkout URL
-        $response->assertRedirect('https://checkout.chapa.co');
-    }
-
-    // Test chapaCallback method
-    public function testChapaCallback()
-    {
-        // Mock the response from Chapa API
-        $mockedChapaResponse = [
-            'status' => 'success',
-            'data' => [
-                'amount' => 100
-            ]
         ];
 
-        // Mock the API call to Chapa's transaction verification endpoint
-        Http::fake([
-            'https://api.chapa.co/v1/transaction/verify/*' => Http::response($mockedChapaResponse, 200),
+        // Act: Act as the user and send a post request to the transfer endpoint
+        $response = $this->actingAs($user)->post('/api/transaction/transfer', $data);
+
+        // Assert: Check if the response is a redirect (302) to Chapa's payment page
+        $response->assertStatus(302);
+        $response->assertRedirect('https://checkout.chapa.co');  // Redirect to Chapa's payment page
+
+        // Assert that the transaction job was dispatched
+        Queue::assertPushed(Transaction::class);
+    }
+
+    public function testChapaCallback()
+    {
+        // Arrange: Create a user and a transaction
+        $user = User::factory()->create();
+        $transaction = Transaction::factory()->create([
+            'user_id' => $user->id,
+            'status' => 'pending',
         ]);
 
-        // Simulate a callback request
-        $response = $this->postJson('/api/callback', [
-            'transaction_id' => 'unique-ref-123',
-        ]);
+        $data = [
+            'tx_ref' => $transaction->reference,  // Set the correct tx_ref
+            'status' => 'completed',
+        ];
 
-        // Assert that the wallet was updated successfully
-        $response->assertJson(['message' => 'Wallet updated successfully']);
+        // Act: Send a post request to Chapa callback endpoint
+        $response = $this->actingAs($user)->post('/api/transaction/chapa/callback', $data);
+
+        // Assert: Check if the response is the expected status
+        $response->assertStatus(200);
+        $response->assertJson(['message' => 'Transaction completed successfully']);
+    }
+
+    public function testChapaCallbackWithoutTxRef()
+    {
+        // Arrange: Create a user
+        $user = User::factory()->create();
+        $data = [
+            'status' => 'completed',
+        ];
+
+        // Act: Send a post request to the Chapa callback endpoint
+        $response = $this->actingAs($user)->post('/api/transaction/chapa/callback', $data);
+
+        // Assert: Assert the response is a 400 Bad Request with the correct error message
+        $response->assertStatus(400);
+        $response->assertJson(['error' => 'tx_ref is required']);
+    }
+
+    public function testChapaCallbackTransactionNotFound()
+    {
+        // Arrange: Create a user
+        $user = User::factory()->create();
+        $data = [
+            'tx_ref' => 'nonexistent_reference',  // This reference doesn't exist
+            'status' => 'completed',
+        ];
+
+        // Act: Send a post request to the Chapa callback endpoint
+        $response = $this->actingAs($user)->post('/api/transaction/chapa/callback', $data);
+
+        // Assert: Assert the response is a 400 Bad Request with the correct error message
+        $response->assertStatus(400);
+        $response->assertJson(['message' => 'Transaction verification failed']);
     }
 }
-

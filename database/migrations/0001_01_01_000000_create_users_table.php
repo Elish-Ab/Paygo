@@ -19,7 +19,6 @@ return new class extends Migration
             $table->string('email')->nullable()->unique();
             $table->string('password')->nullable();
             $table->string('telegram_id')->unique();
-            $table->decimal('balance', 15, 2)->default(0.00);
             $table->boolean('is_verified')->default(false);
             $table->rememberToken();
             $table->timestamps();

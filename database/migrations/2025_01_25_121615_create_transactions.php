@@ -13,7 +13,10 @@ return new class extends Migration
     {
         Schema::create('transactions', function (Blueprint $table) {
             $table->id();
+            $table->foreignId('user_id')->constrained()->onDelete('cascade'); // Add the user_id column
+            $table->foreignId('recipient_id')->constrained('users')->onDelete('cascade'); // Add recipient_id column
             $table->string('tx_ref')->unique();            // Unique transaction reference
+            $table->string('reference')->unique();         // Add reference column
             $table->decimal('amount', 15, 2);             // Payment amount
             $table->string('currency');                   // Payment currency
             $table->string('email');                      // Payer's email
@@ -24,8 +27,6 @@ return new class extends Migration
             $table->text('description')->nullable();      // Additional notes
             $table->timestamps();
         });
-
-
     }
 
     /**

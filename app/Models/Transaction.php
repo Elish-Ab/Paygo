@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Faker\Provider\pt_PT\Payment;
 
 class Transaction extends Model
 {
@@ -22,6 +23,7 @@ class Transaction extends Model
      * @var array
      */
     protected $fillable = [
+        'user_id',
         'tx_ref',
         'amount',
         'currency',
@@ -42,5 +44,13 @@ class Transaction extends Model
         'status' => 'string',
         'transaction_type' => 'string',
     ];
+
+    public function sender()
+    {
+        return $this->belongsTo(User::class,'user_id');
+    }
+    public function payment(){
+        return $this->hasOne(Payment::class);
+    }
 
 }

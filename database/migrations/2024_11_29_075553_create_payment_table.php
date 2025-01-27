@@ -11,10 +11,12 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('payment_links', function (Blueprint $table) {
+        Schema::create('payment', function (Blueprint $table) {
             $table->uuid();
             $table->foreignId('user_id')->constrained('users');
+            $table->foreignId('transaction_id')->constrained('transactions');
             $table->decimal('amount', 15, 2);
+            $table->enum('payment_gateway',['chapaa','mpesa','card']);
             $table->string('reference')->unique();
             $table->string('description')->nullable();
             $table->boolean('is_paid')->default(false);
@@ -27,6 +29,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('paymentlinks');
+        Schema::dropIfExists('payment');
     }
 };
