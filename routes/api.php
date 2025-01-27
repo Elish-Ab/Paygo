@@ -8,13 +8,42 @@ use App\Http\Controllers\UserController;
 use App\Http\Controllers\WalletController;
 use App\Http\Middleware\EnsureUserIsOwner;
 use App\Http\Controllers\PaymentController;
+use App\Http\Controllers\TelegramController;
 use App\Http\Controllers\TransactionController;
+
+
+Route::post('/bank-to-wallet', [TransactionController::class, 'bankToWallet']);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 // Auth routes
 Route::post('/login', [AuthController::class, 'login'])->name('login');
 Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth:sanctum');
 Route::post('/signup', [UserController::class, 'create_user']);
+Route::post('/telegram/webhook', [TelegramController::class, 'webhook']);
 
 // PaymentController routes
 // Route::post('/initalize-PaymentController', [PaymentController::class, 'initalizePaymentController'])->name('initalize');

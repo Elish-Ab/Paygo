@@ -3,206 +3,191 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\PaymentRequest;
-use SimpleQRCode;
 use App\Models\PaymentLink;
 use App\Models\Transaction;
-use Illuminate\Support\Str;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Validator;
 use SimpleSoftwareIO\QrCode\Facades\QrCode;
-use BaconQrCode\Renderer\Image\ImagickImageBackEnd;
-use Mockery\Generator\StringManipulation\Pass\Pass;
+use Illuminate\Http\Request;
 
-class PaymentLinkController extends Controller
+class PaymentController extends Controller
 {
     /**
      * Generate a payment link and initialize the payment process.
      */
     public function generateLink(PaymentRequest $request)
-{
-    // Validate the incoming request
-    $validated = $request->validated();
-    // Prepare the data to send to the API
-    $postData = [
-        'amount' => $validated['amount'],
-        'currency' => $validated['currency'],
-        'email' => $validated['email'],
-        'phone' => $validated['phone'],
-        'callback_url' => $validated['callback_url'],
-        'tx_ref' => 'chewatatest-' . time()  // Add tx_ref for unique transaction reference
-    ];
+    {
+        // Validate the incoming request
+        $validated = $request->validated();
 
-    try {
-        // Make the API request
-        $response = Http::withHeaders([
-            'Authorization' => 'Bearer ' . env('CHAPA_SECRET_KEY')
-        ])->post('https://api.chapa.co/v1/transaction/initialize', $postData);
+        // Prepare data for the API request
+        $postData = $this->preparePostData($validated);
 
-        // Log the raw API response for debugging purposes
-        Log::info('Chapa API Response:', $response->json());
+        try {
+            $response = $this->initializePaymentRequest($postData);
 
-        if ($response->successful()) {
-            // Get the response data as an array
-            $responseData = $response->json();
+            if ($response->successful()) {
+                $responseData = $response->json();
+                $checkoutUrl = $responseData['data']['checkout_url'] ?? null;
 
-            // Access the checkout URL safely
-            $checkoutUrl = $responseData['data']['checkout_url'] ?? null;
+                if (!$checkoutUrl) {
+                    Log::error('Checkout URL missing in API response', $responseData);
+                    return $this->errorResponse('Checkout URL is missing in the response from Chapa.');
+                }
 
-            if (!$checkoutUrl) {
-                Log::error('Checkout URL missing in API response', $responseData);
+                // Generate QR code for the checkout URL
+                $qrCodeImage = $this->generateQrCode($checkoutUrl);
+
                 return response()->json([
-                    'status' => 'failure',
-                    'message' => 'Checkout URL is missing in the response from Chapa.'
+                    'status' => 'success',
+                    'checkout_url' => $checkoutUrl,
+                    'qr_code' => 'data:image/png;base64,' . $qrCodeImage
                 ]);
             }
 
-            // Generate a directory based on the current date
-            $date = now()->format('Y-m-d');
-            $directory = storage_path("app/{$date}");
-            if (!file_exists($directory)) {
-                mkdir($directory, 0755, true); // Create the directory if it doesn't exist
+            return $this->logAndReturnApiError($response);
+        } catch (\Exception $e) {
+            return $this->handleException($e, 'Error during payment link generation');
+        }
+    }
+
+    /**
+     * Initialize a payment process.
+     */
+    public function initializePayment(PaymentRequest $request)
+    {
+        // Validate the incoming request
+        $validated = $request->validated();
+
+        // Prepare data for the API request
+        $postData = $this->preparePostData($validated);
+
+        // Save transaction details to the database
+        Transaction::create(array_merge($postData, [
+            'status' => 'pending',
+            'transaction_type' => 'payment'
+        ]));
+
+        try {
+            $response = $this->initializePaymentRequest($postData);
+
+            if ($response->successful()) {
+                $responseData = $response->json();
+                $checkoutUrl = $responseData['data']['checkout_url'] ?? null;
+
+                return response()->json([
+                    'status' => 'success',
+                    'checkout_url' => $checkoutUrl
+                ]);
             }
 
-            // Generate a unique filename within the directory
-            $timestamp = time();
-            $filename = "{$directory}/qr_{$timestamp}.png";
-
-            // Generate the QR code
-            $qrCodeImage = QrCode::format('png')->size(200)->generate($checkoutUrl, $filename);
-
-
-            return response()->json([
-                'status' => 'success',
-                'checkout_url' => $checkoutUrl,
-                'qr_code' => 'data:image/png;base64,' . $qrCodeImage // Embed QR code as base64 in response
-            ]);
-        } else {
-            // Log error details if the request was unsuccessful
-            Log::error('Chapa API Error:', [
-                'status_code' => $response->status(),
-                'response_body' => $response->body(),
-                'response_data' => $response->json()
-            ]);
-            return response()->json([
-                'status' => 'failure',
-                'message' => 'Error initializing payment. Please try again.'
-            ]);
+            return $this->logAndReturnApiError($response);
+        } catch (\Exception $e) {
+            return $this->handleException($e, 'Error during payment initialization');
         }
-    } catch (\Exception $e) {
-        // Log the exception message
-        Log::error('Error during payment link generation: ' . $e->getMessage(), [
-            'exception' => $e
-        ]);
-        return response()->json([
-            'status' => 'failure',
-            'message' => 'An error occurred while generating the payment link.'
-        ]);
     }
-}
 
+    /**
+     * Handle Chapa webhook.
+     */
+    public function handleWebhook(Request $request)
+    {
+        $rawPayload = $request->getContent();
+        $canonicalPayload = json_encode(json_decode($rawPayload, true));
+        $computedSignature = hash_hmac('sha256', $canonicalPayload, env('CHAPA_WEBHOOK_SECRET'));
 
+        Log::info('Webhook Details', [
+            'headers' => $request->headers->all(),
+            'raw_payload' => $rawPayload,
+            'canonical_payload' => $canonicalPayload,
+            'webhook_signature' => $request->header('X-Chapa-Signature'),
+            'computed_signature' => $computedSignature,
+        ]);
 
+        if (!hash_equals($request->header('X-Chapa-Signature'), $computedSignature)) {
+            Log::error('Invalid webhook signature');
+            return response('Invalid signature', 400);
+        }
 
-public function initalizePayment(PaymentRequest $request)
-{
-    // Validate the incoming request data
-    $validated = $request->validated();
+        Log::info('Webhook verified successfully', $request->all());
 
-    // Prepare data for the payment initialization
-    $postData = [
-        'amount' => $validated['amount'],
-        'currency' => $validated['currency'],
-        'email' => $validated['email'],
-        'phone' => $validated['phone'],
-        'callback_url' => $validated['callback_url'],
-        'tx_ref' => 'chewatatest-' . time()  // Add tx_ref for transaction reference
-    ];
+        return response('Webhook verified', 200);
+    }
 
+    // Helper Methods
 
-       // Save transaction details to the database
-       Transaction::create([
-        'tx_ref' => $postData['tx_ref'],
-        'amount' => $postData['amount'],
-        'currency' => $postData['currency'],
-        'email' => $postData['email'],
-        'phone' => $postData['phone'],
-        'callback_url' => $postData['callback_url'],
-        'status' => 'pending',
-        'transaction_type' => 'payment'
-    ]);
+    /**
+     * Prepare data for Chapa API requests.
+     */
+    private function preparePostData(array $validated)
+    {
+        return [
+            'amount' => $validated['amount'],
+            'currency' => $validated['currency'],
+            'email' => $validated['email'],
+            'phone' => $validated['phone'],
+            'callback_url' => $validated['callback_url'],
+            'tx_ref' => 'chewatatest-' . time()
+        ];
+    }
 
-    try {
-        // Make the API request with the correct Authorization header
-        $response = Http::withHeaders([
+    /**
+     * Make the payment initialization request to Chapa.
+     */
+    private function initializePaymentRequest(array $postData)
+    {
+        return Http::withHeaders([
             'Authorization' => 'Bearer ' . env('CHAPA_SECRET_KEY')
         ])->post('https://api.chapa.co/v1/transaction/initialize', $postData);
+    }
 
-        // Log the raw response for debugging
-        Log::info('Chapa API Response:', $response->json());
+    /**
+     * Generate a QR code for the given URL.
+     */
+    private function generateQrCode(string $url)
+    {
+        return base64_encode(QrCode::format('png')->size(200)->generate($url));
+    }
 
-        if ($response->successful()) {
-            $responseData = $response->json();  // Get the response data as an array
-            // Safely access the checkout URL
-            $checkoutUrl = $responseData['data']['checkout_url'] ?? null;
-            return response()->json([
-                'status' => 'success',
-                'checkout_url' => $checkoutUrl
-            ]);
-        } else {
-            Log::error('Chapa API Error:', [
-                'status_code' => $response->status(),
-                'response_body' => $response->body(),
-                'response_data' => $response->json()
-            ]);
-            return response()->json([
-                'status' => 'failure',
-                'message' => 'Error initializing payment. Please try again.'
-            ]);
-        }
-    } catch (\Exception $e) {
-        Log::error('Error during payment initialization: ' . $e->getMessage());
+    /**
+     * Log and handle API errors.
+     */
+    private function logAndReturnApiError($response)
+    {
+        Log::error('Chapa API Error', [
+            'status_code' => $response->status(),
+            'response_body' => $response->body(),
+            'response_data' => $response->json(),
+        ]);
+
         return response()->json([
             'status' => 'failure',
-            'message' => 'Error during payment initialization. Please try again.'
+            'message' => 'Error initializing payment. Please try again.'
         ]);
     }
-}
 
+    /**
+     * Handle exceptions and return a standardized error response.
+     */
+    private function handleException(\Exception $e, string $contextMessage)
+    {
+        Log::error($contextMessage . ': ' . $e->getMessage(), ['exception' => $e]);
 
-
-
-public function handleWebhook(Request $request)
-{
-    // Raw payload
-    $rawPayload = $request->getContent();
-
-    // Canonicalize payload to ensure consistent formatting
-    $canonicalPayload = json_encode(json_decode($rawPayload, true));
-
-    // Compute the HMAC signature
-    $computedSignature = hash_hmac('sha256', $canonicalPayload, env('CHAPA_WEBHOOK_SECRET'));
-
-    // Log details for debugging
-    Log::info('Request Headers: ' . json_encode($request->headers->all()));
-    Log::info('Raw Payload: ' . $rawPayload);
-    Log::info('Canonical Payload: ' . $canonicalPayload);
-    Log::info('Webhook Signature from Header: ' . $request->header('X-Chapa-Signature'));
-    Log::info('Computed Signature: ' . $computedSignature);
-    Log::info('Webhook Secret Key: ' . env('CHAPA_WEBHOOK_SECRET'));
-
-    // Validate signature
-    if (!hash_equals($request->header('X-Chapa-Signature'), $computedSignature)) {
-        Log::error('Invalid webhook signature');
-        return response('Invalid signature', 400);
+        return response()->json([
+            'status' => 'failure',
+            'message' => $contextMessage
+        ]);
     }
 
-    Log::info('Webhook verified successfully');
-    Log::info("message", $request->all());
-
-    return response('Webhook verified', 200);
-}
-
-
+    /**
+     * Return a standardized error response.
+     */
+    private function errorResponse(string $message)
+    {
+        return response()->json([
+            'status' => 'failure',
+            'message' => $message
+        ]);
+    }
 }
