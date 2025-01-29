@@ -1,55 +1,39 @@
 <?php
-
 namespace App\Http\Controllers;
 
-
-use App\Models\User;
-use App\Models\Wallet;
 use Illuminate\Http\Request;
-use Telegram\Bot\TelegramClient;
-use Illuminate\Support\Facades\Log;
-use Telegram\Bot\Laravel\Facades\Telegram;
 
 class TelegramController extends Controller
 {
-    public function webhook(Request $request)
+    public function handleWebhook(Request $request)
     {
-        $update = Telegram::getWebhookUpdate();
+        // Log the request for debugging
+        \Log::info('Webhook received: ', $request->all());
 
-        if ($update->isType('message')) {
-            $message = $update->getMessage();
-            $chatId = $message->getChat()->getId();
-            $text = $message->getText();
+        // Get the message
+        $message = $request->input('message.text');
+        $chatId = $request->input('message.chat.id');
 
-            if ($text === '/start') {
-                $response = "Welcome! You can:\n1. Link your bank account.\n2. Check wallet balance.\n3. Transfer money.";
-            } elseif (str_starts_with($text, '/transfer')) {
-                $response = $this->handleTransferCommand($chatId, $text);
-            } else {
-                $response = "Unknown command. Use /start for help.";
-            }
-
-            Telegram::sendMessage([
-                'chat_id' => $chatId,
-                'text' => $response,
-            ]);
-        }
-    }
-
-    private function handleTransferCommand($chatId, $text)
-    {
-        // Parse command and process transfer
-        $parts = explode(' ', $text);
-        if (count($parts) !== 3) {
-            return "Invalid command. Use: /transfer <amount> <username>";
+        // Check if a message was sent
+        if ($message) {
+            // Respond to the user
+            $this->sendMessage($chatId, "You said: " . $message);
         }
 
-        $amount = $parts[1];
-        $toUsername = $parts[2];
-
-        // Validate and process transaction here
-        return "Transfer of $amount to $toUsername initiated.";
+        return response('ok', 200);
     }
 
+    private function sendMessage($chatId, $text)
+    {
+        $token = env('TELEGRAM_BOT_TOKEN');
+        $url = "https://api.telegram.org/bot{$token}/sendMessage";
 
+        $data = [
+            'chat_id' => $chatId,
+            'text' => $text,
+        ];
+
+        // Send the message
+        file_get_contents($url . '?' . http_build_query($data));
+    }
 }

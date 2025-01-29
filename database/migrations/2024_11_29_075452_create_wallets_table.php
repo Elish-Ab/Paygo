@@ -15,7 +15,7 @@ return new class extends Migration
             $table->id();
             $table->foreignIdFor(App\Models\User::class, 'user_id')->constrained();
             $table->float('balance',precision:4);
-            $table->string('currency');
+            $table->string('currency')->default('ETB');
             $table->timestamps();
         });
     }

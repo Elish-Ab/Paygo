@@ -1,81 +1,45 @@
 <?php
-
 namespace App\Http\Controllers;
+use Chapa\Chapa;
+use App\Models\Transaction;
+use Illuminate\Http\Request;
 
-use Illuminate\Support\Facades\Log;
-use Chapa\Chapa\Facades\Chapa as Chapa;
 
 class ChapaController extends Controller
 {
-    /**
-     * Initialize Rave payment process
-     * @return void
-     */
-    protected $reference;
-
-    public function __construct(){
-        $this->reference = Chapa::generateReference();
-
-    }
-    public function initialize()
+    public function initialize(Request $request)
     {
-        //This generates a payment reference
-        $reference = $this->reference;
+        $chapa = new Chapa(env('CHAPA_SECRET_KEY'));
 
-
-        // Enter the details of the payment
         $data = [
-
-            'amount' => 100,
-            'email' => 'hi@negade.com',
-            'tx_ref' => $reference,
-            'currency' => "ETB",
-            'callback_url' => route('callback',[$reference]),
-            'first_name' => "Israel",
-            'last_name' => "Goytom",
-            "customization" => [
-                "title" => 'Chapa Laravel Test',
-                "description" => "I amma testing this"
-            ]
+            'amount' => $request->amount,
+            'currency' => 'ETB',
+            'email' => $request->email,
+            'first_name' => $request->first_name,
+            'last_name' => $request->last_name,
+            'tx_ref' => uniqid(),
+            'callback_url' => route('chapa.callback'),
         ];
 
-
-        $payment = Chapa::initializePayment($data);
-
-
-        if ($payment['status'] !== 'success') {
-            // notify something went wrong
-            return;
-        }
-
-        return redirect($payment['data']['checkout_url']);
+        $transaction = $chapa->initialize($data);
+        return redirect($transaction['checkout_url']);
     }
 
-    /**
-     * Obtain Rave callback information
-     * @return void
-     */
-    public function callback($reference)
+    public function callback(Request $request)
     {
-        Log::info("Callback received with reference: {$reference}");
+        $chapa = new Chapa(env('CHAPA_SECRET_KEY'));
 
-        try {
-            $data = Chapa::verifyTransaction($reference);
-            Log::info('Chapa verification response', ['response' => $data]);
+        $response = $chapa->verifyTransaction($request->tx_ref);
 
-            if ($data['status'] === 'success') {
-                // Handle successful payment
-                Log::info('Payment successful', ['data' => $data]);
-                return response()->json(['message' => 'Payment successful', 'data' => $data]);
-            }
+        if ($response['status'] === 'success') {
+            // Update transaction status and user's wallet
+            $transaction = Transaction::where('reference', $request->tx_ref)->first();
+            $transaction->status = 'success';
+            $transaction->save();
 
-            // Handle failed payment
-            Log::error('Payment verification failed', ['response' => $data]);
-            return response()->json(['message' => $data['message'], 'status' => $data['status']], 400);
-        } catch (\Exception $e) {
-            Log::error('Callback error', ['error' => $e->getMessage()]);
-            return response()->json(['message' => 'An error occurred during verification'], 500);
+            return response()->json(['message' => 'Payment successful!']);
         }
-    }
 
+        return response()->json(['message' => 'Payment failed.'], 400);
+    }
 }

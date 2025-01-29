@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use telegram;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -10,6 +11,75 @@ use Illuminate\Support\Facades\Http;
 
 class WalletController extends Controller
 {
+    public function createWallet(Request $request)
+    {
+        $telegram->onCommand('create_wallet', function ($update) use ($telegram) {
+            $chatId = $update->getMessage()->getChat()->getId();
+            $telegramId = $update->getMessage()->getFrom()->getId();
+            $name = $update->getMessage()->getFrom()->getFirstName();
+
+            // Check if the user already exists
+            $user = User::where('telegram_id', $telegramId)->first();
+
+            if (!$user) {
+                // Register the user if not already registered
+                $user = User::create([
+                    'telegram_id' => $telegramId,
+                    'name' => $name,
+                    'email' => null, // Optional: Collect email later
+                ]);
+            }
+
+            // Check if the wallet already exists
+            if ($user->wallet) {
+                $telegram->sendMessage([
+                    'chat_id' => $chatId,
+                    'text' => "You already have a wallet. Your current balance is: {$user->wallet->balance} {$user->wallet->currency}",
+                ]);
+                return;
+            }
+
+            // Create a new wallet
+            Wallet::create([
+                'user_id' => $user->id,
+                'balance' => 0, // Initialize with zero balance
+                'currency' => 'ETB', // Default currency
+            ]);
+
+            $telegram->sendMessage([
+                'chat_id' => $chatId,
+                'text' => "Your wallet has been created successfully! Your current balance is: 0 ETB.",
+            ]);
+        });
+    }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     public function check_balance(Request $request){
 
         $balance = Auth::user()->balance; // Only accessible if middleware passes

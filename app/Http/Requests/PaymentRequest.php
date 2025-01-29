@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use auth;
 use Illuminate\Foundation\Http\FormRequest;
 
 class PaymentRequest extends FormRequest
@@ -11,7 +12,7 @@ class PaymentRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return auth()->user();
+        return auth()->check();
     }
 
     /**

@@ -26,6 +26,7 @@ class TransactionController extends Controller
             'amount' => 'required|numeric|min:1',
             'user_id' => 'required|exists:users,id',
         ]);
+        dd($validatedData);
 
         $user = User::findOrFail($validatedData['user_id']);
 
