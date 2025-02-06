@@ -1,57 +1,50 @@
-name: Laravel CI
+name: PHP PHPUnit Tests
 
 on:
   push:
     branches:
-      - main
+      - main  # Trigger on push to main (or your default branch)
   pull_request:
     branches:
-      - main
+      - main  # Trigger on pull request to main (or your default branch)
 
 jobs:
-  build:
+  test:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout Repository
-      uses: actions/checkout@v3
+    - name: Checkout code
+      uses: actions/checkout@v2
 
-    # Set up PHP and necessary extensions
     - name: Set up PHP
       uses: shivammathur/setup-php@v2
       with:
-        php-version: '8.2'
-        extensions: mbstring, sqlite3, bcmath, intl, gd
+        php-version: '8.3'  # Use the PHP version you're working with
 
-    # Install dependencies
-    - name: Install Composer dependencies
+    - name: Install dependencies
       run: |
-        composer install --no-interaction --prefer-dist
+        composer install --no-interaction
 
-    # Create SQLite Database File
-    - name: Create SQLite Database File
+    - name: Run PHPUnit tests
       run: |
-        touch database/database.sqlite
+        vendor/bin/phpunit --configuration phpunit.xml
+      continue-on-error: false # Ensure the workflow stops on test failure
 
-    # Set up environment variables
-    - name: Set up .env
-      run: |
-        cp .env.example .env
-        php artisan key:generate
-
-    # Run Database Migrations
-    - name: Run Database Migrations
-      run: php artisan migrate --force
-
-    # Run Tests
-    - name: Run PHPUnit Tests
-      run: vendor/bin/phpunit --configuration phpunit.xml
-
-    # Optionally, you can cache dependencies to speed up future runs
-    - name: Cache Composer dependencies
-      uses: actions/cache@v3
+    - name: Cache PHPUnit and Composer dependencies
+      uses: actions/cache@v2
       with:
-        path: ~/.composer/cache
+        path: |
+          ~/.composer/cache
+          vendor/
         key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
         restore-keys: |
           ${{ runner.os }}-composer-
+
+    - name: Clear cache if necessary
+      run: |
+        rm -rf vendor/
+        composer install --no-interaction
+
+    - name: Re-run PHPUnit tests after clearing cache
+      run: |
+        vendor/bin/phpunit --configuration phpunit.xml
