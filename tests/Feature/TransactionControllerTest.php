@@ -15,7 +15,7 @@ class TransactionControllerTest extends TestCase
 {
     $response = $this->postJson('/api/telegram/webhook', [
         'message' => [
-            'chat' => ['id' => 123456],
+            'chat' => ['id' => 1405766519],
             'text' => '/start',
         ],
     ]);

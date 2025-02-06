@@ -1,8 +1,8 @@
 <?php
 namespace App\Http\Controllers;
-use Chapa\Chapa;
 use App\Models\Transaction;
 use Illuminate\Http\Request;
+use Chapa\Chapa\Facades\Chapa;
 
 
 class ChapaController extends Controller
